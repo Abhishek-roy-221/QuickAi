@@ -21,7 +21,7 @@ try {
     const { data } = await axios.get('/api/user/get-user-creations', {
         headers: { Authorization: `Bearer ${await getToken()}` }
 })
-if(data.sucess){
+if(data.success){
 setCreations(data.creations)
 }else{
   toast.error(data.message)
@@ -65,12 +65,25 @@ setLoading(false)
         </div>
 
       </div>
-      <div className='space-y-3'>
+
+      {
+  loading ? (
+<div className='flex justify-center items-center h-3/4'>
+  <div className='animate-spin rounded-full h-11 w-11 border-3 border-purple-500 border-t-transparent'>
+
+  </div>
+</div>
+  ) :
+   (
+  <div className='space-y-3'>
         <p className='mt-6 mb-4'>Recent Creations</p>
         {
           creations.map((item) => <CreationItems key={item.id} item={item} />)
         }
       </div>
+  )
+}
+    
 
     </div>
   )
