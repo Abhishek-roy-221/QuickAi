@@ -6,11 +6,14 @@ import { v2 as cloudinary } from "cloudinary";
 import fs from 'fs';
 import pdf from 'pdf-parse/lib/pdf-parse.js';
 
-// Initialize the Official Google SDK
+// INITIALIZATION: Explicitly set apiVersion to 'v1' to fix the 404 error
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-// We use 'gemini-1.5-flash' here - the SDK handles the URL versioning automatically
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const model = genAI.getGenerativeModel({ 
+    model: "gemini-1.5-flash",
+    apiVersion: 'v1' 
+});
 
+// 1. Generate Article
 export const generateArticle = async (req, res) => {
     try {
         const { userId } = req.auth();
@@ -22,8 +25,7 @@ export const generateArticle = async (req, res) => {
             return res.json({ success: false, message: "Limits reached. Upgrade to continue." });
         }
 
-        // Official SDK Method
-        const result = await model.generateContent(prompt + `. Write approximately ${length || 500} words.`);
+        const result = await model.generateContent(`${prompt}. Write approximately ${length || 500} words.`);
         const response = await result.response;
         const content = response.text();
 
@@ -50,6 +52,7 @@ export const generateArticle = async (req, res) => {
     }
 }
 
+// 2. Generate Blog Title
 export const generateBlogTitle = async (req, res) => {
     try {
         const { userId } = req.auth();
@@ -83,6 +86,7 @@ export const generateBlogTitle = async (req, res) => {
     }
 }
 
+// 3. Generate Image (Clipdrop)
 export const generateImage = async (req, res) => {
     try {
         const { userId } = req.auth();
@@ -109,6 +113,7 @@ export const generateImage = async (req, res) => {
     }
 }
 
+// 4. Remove Background (Cloudinary AI)
 export const removeImageBackground = async (req, res) => {
     try {
         const { userId } = req.auth();
@@ -127,6 +132,7 @@ export const removeImageBackground = async (req, res) => {
     }
 }
 
+// 5. Remove Object (Cloudinary AI)
 export const removeImageObject = async (req, res) => {
     try {
         const { userId } = req.auth();
@@ -148,6 +154,7 @@ export const removeImageObject = async (req, res) => {
     }
 }
 
+// 6. Resume Review
 export const resumeReview = async (req, res) => {
     try {
         const { userId } = req.auth();
