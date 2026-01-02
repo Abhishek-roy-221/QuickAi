@@ -28,7 +28,7 @@ const RemoveObject = () => {
       formData.append('image',input)
        formData.append('object',object)
     
-      const { data } = await axios.post('api/ai/remove-image-object'
+      const { data } = await axios.post('/api/ai/remove-image-object'
         , formData, { headers: { Authorization: `Bearer ${await getToken()}` } }
       )
 
