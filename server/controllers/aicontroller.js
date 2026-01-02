@@ -24,7 +24,7 @@ export const generateArticle = async (req, res) => {
         }
 
         const response = await AI.chat.completions.create({
-            model: "gemini-2.0-flash",
+            model: "gemini-1.5-flash",
             messages: [
 
                 {
@@ -71,7 +71,7 @@ export const generateBlogTitle = async (req, res) => {
         }
 
         const response = await AI.chat.completions.create({
-            model: "gemini-2.0-flash",
+            model: "gemini-1.5-flash",
             messages: [
 
                 {
@@ -248,7 +248,7 @@ export const resumeReview = async (req, res) => {
        Resume Content:\n\n${pdfData.text} `
 
            const response = await AI.chat.completions.create({
-            model: "gemini-2.0-flash",
+            model: "gemini-1.5-flash",
             messages: [
 
                 {
