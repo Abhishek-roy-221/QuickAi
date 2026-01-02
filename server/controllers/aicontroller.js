@@ -5,18 +5,18 @@ import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
 import pdf from "pdf-parse/lib/pdf-parse.js";
 import FormData from "form-data";
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 /* ================= GEMINI SETUP ================= */
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// ✅ THIS MODEL WORKS FOR ALL PROJECTS
 const model = genAI.getGenerativeModel({
-  model: "gemini-pro",
+  model: "models/gemini-1.5-flash",
 });
 
-/* ================= TEXT ================= */
+/* ================= TEXT FEATURES ================= */
 
 export const generateArticle = async (req, res) => {
   try {
@@ -32,9 +32,9 @@ export const generateArticle = async (req, res) => {
     `;
 
     res.json({ success: true, content });
-  } catch (err) {
-    console.error("GEMINI ERROR:", err.message);
-    res.json({ success: false, message: "Gemini failed" });
+  } catch (error) {
+    console.error("generateArticle:", error);
+    res.status(500).json({ success: false, message: "Gemini failed" });
   }
 };
 
@@ -52,9 +52,9 @@ export const generateBlogTitle = async (req, res) => {
     `;
 
     res.json({ success: true, content });
-  } catch (err) {
-    console.error("GEMINI ERROR:", err.message);
-    res.json({ success: false, message: "Gemini failed" });
+  } catch (error) {
+    console.error("generateBlogTitle:", error);
+    res.status(500).json({ success: false, message: "Gemini failed" });
   }
 };
 
@@ -70,11 +70,7 @@ export const resumeReview = async (req, res) => {
     const buffer = fs.readFileSync(resume.path);
     const pdfData = await pdf(buffer);
 
-    const prompt = `
-Review the following resume and give constructive feedback:
-
-${pdfData.text}
-    `;
+    const prompt = `Review this resume and give feedback:\n\n${pdfData.text}`;
 
     const result = await model.generateContent(prompt);
     const content = result.response.text();
@@ -85,13 +81,13 @@ ${pdfData.text}
     `;
 
     res.json({ success: true, content });
-  } catch (err) {
-    console.error("GEMINI ERROR:", err.message);
-    res.json({ success: false, message: "Gemini failed" });
+  } catch (error) {
+    console.error("resumeReview:", error);
+    res.status(500).json({ success: false, message: "Gemini failed" });
   }
 };
 
-/* ================= IMAGE (UNCHANGED) ================= */
+/* ================= IMAGE FEATURES ================= */
 
 export const generateImage = async (req, res) => {
   try {
@@ -126,8 +122,41 @@ export const generateImage = async (req, res) => {
     `;
 
     res.json({ success: true, content: secure_url });
-  } catch (err) {
-    console.error(err);
-    res.json({ success: false, message: err.message });
+  } catch (error) {
+    console.error("generateImage:", error);
+    res.status(500).json({ success: false, message: "Image generation failed" });
+  }
+};
+
+export const removeImageBackground = async (req, res) => {
+  try {
+    const image = req.file;
+
+    const { secure_url } = await cloudinary.uploader.upload(image.path, {
+      transformation: [{ effect: "background_removal" }],
+    });
+
+    res.json({ success: true, content: secure_url });
+  } catch (error) {
+    console.error("removeImageBackground:", error);
+    res.status(500).json({ success: false });
+  }
+};
+
+export const removeImageObject = async (req, res) => {
+  try {
+    const { object } = req.body;
+    const image = req.file;
+
+    const { public_id } = await cloudinary.uploader.upload(image.path);
+
+    const imageUrl = cloudinary.url(public_id, {
+      transformation: [{ effect: `gen_remove:${object}` }],
+    });
+
+    res.json({ success: true, content: imageUrl });
+  } catch (error) {
+    console.error("removeImageObject:", error);
+    res.status(500).json({ success: false });
   }
 };
