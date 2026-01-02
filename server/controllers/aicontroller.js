@@ -8,13 +8,12 @@ import FormData from "form-data";
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-/* ================= GEMINI SETUP ================= */
-
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const model = genAI.getGenerativeModel({
-  model: "gemini-1.5-pro",
+  model: "gemini-1.5-flash", // ✅ THIS IS THE FIX
 });
+
 
 /* ================= TEXT FEATURES ================= */
 
