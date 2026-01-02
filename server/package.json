@@ -13,8 +13,8 @@
   "license": "ISC",
   "dependencies": {
     "@clerk/express": "^1.7.31",
-    "@neondatabase/serverless": "^1.0.1",
     "@google/generative-ai": "^0.24.1",
+    "@neondatabase/serverless": "^1.0.1",
     "axios": "^1.13.2",
     "cloudinary": "^2.7.0",
     "cors": "^2.8.5",
@@ -22,6 +22,7 @@
     "express": "^5.1.0",
     "multer": "^2.0.2",
     "node-fetch": "^3.3.2",
+    "openai": "^6.15.0",
     "pdf-parse": "^1.1.1"
   },
   "devDependencies": {
