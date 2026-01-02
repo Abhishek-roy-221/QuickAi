@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import sql from "../configs/db.js";
 import { clerkClient } from "@clerk/express";
 import axios from "axios";
@@ -6,13 +6,10 @@ import { v2 as cloudinary } from "cloudinary";
 import fs from 'fs';
 import pdf from 'pdf-parse/lib/pdf-parse.js';
 
-// INITIALIZATION: 
-// The v1beta endpoint is the most stable for the OpenAI shim.
-// We remove the trailing slash to ensure the SDK appends paths correctly.
-const AI = new OpenAI({
-    apiKey: process.env.GEMINI_API_KEY,
-    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai"
-});
+// Initialize the Official Google SDK
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// We use 'gemini-1.5-flash' here - the SDK handles the URL versioning automatically
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 export const generateArticle = async (req, res) => {
     try {
@@ -25,18 +22,13 @@ export const generateArticle = async (req, res) => {
             return res.json({ success: false, message: "Limits reached. Upgrade to continue." });
         }
 
-        // Using 'gemini-1.5-flash' with the explicit baseURL above
-        const response = await AI.chat.completions.create({
-            model: "gemini-1.5-flash",
-            messages: [{ role: "user", content: prompt }],
-            temperature: 0.7,
-            max_tokens: Number(length) || 1000,
-        });
+        // Official SDK Method
+        const result = await model.generateContent(prompt + `. Write approximately ${length || 500} words.`);
+        const response = await result.response;
+        const content = response.text();
 
-        const content = response.choices[0]?.message?.content;
-        if (!content) throw new Error("AI provider returned empty content");
+        if (!content) throw new Error("AI returned empty content");
 
-        // Database insert
         try {
             await sql`INSERT INTO creations (user_id, prompt, content, type)
                       VALUES (${userId}, ${prompt}, ${content}, 'article')`;
@@ -53,8 +45,8 @@ export const generateArticle = async (req, res) => {
         res.json({ success: true, content });
 
     } catch (error) {
-        console.error("ARTICLE_ERROR Details:", error.message);
-        res.status(500).json({ success: false, message: error.message });
+        console.error("GEMINI_ERROR:", error.message);
+        res.status(500).json({ success: false, message: "AI Error: " + error.message });
     }
 }
 
@@ -69,14 +61,9 @@ export const generateBlogTitle = async (req, res) => {
             return res.json({ success: false, message: "Limits reached. Upgrade to continue." });
         }
 
-        const response = await AI.chat.completions.create({
-            model: "gemini-1.5-flash",
-            messages: [{ role: "user", content: prompt }],
-            temperature: 0.7,
-            max_tokens: 150,
-        });
-
-        const content = response.choices[0]?.message?.content;
+        const result = await model.generateContent("Generate a catchy blog title for: " + prompt);
+        const response = await result.response;
+        const content = response.text();
 
         try {
             await sql`INSERT INTO creations (user_id, prompt, content, type)
@@ -118,7 +105,6 @@ export const generateImage = async (req, res) => {
 
         res.json({ success: true, content: secure_url });
     } catch (error) {
-        console.error("IMAGE_ERROR:", error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 }
@@ -170,14 +156,10 @@ export const resumeReview = async (req, res) => {
         const dataBuffer = fs.readFileSync(req.file.path);
         const pdfData = await pdf(dataBuffer);
 
-        const prompt = `Review this resume: ${pdfData.text}`;
-        const response = await AI.chat.completions.create({
-            model: "gemini-1.5-flash",
-            messages: [{ role: "user", content: prompt }],
-            max_tokens: 1500,
-        });
-
-        const content = response.choices[0].message.content;
+        const prompt = `Review this resume and give feedback: ${pdfData.text}`;
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const content = response.text();
 
         await sql`INSERT INTO creations (user_id, prompt, content, type)
                   VALUES (${userId}, 'Resume Review', ${content}, 'resume-review')`;
