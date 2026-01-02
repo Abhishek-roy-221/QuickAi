@@ -1,22 +1,16 @@
 import express from "express";
-import { auth } from "../middlewares/auth.js";
+import { upload } from "../configs/multer.js";
+
 import {
   generateArticle,
   generateBlogTitle,
-  generateImage,
-  removeImageBackground,
-  removeImageObject,
   resumeReview,
 } from "../controllers/aicontroller.js";
-import { upload } from "../configs/multer.js";
 
-const aiRouter = express.Router();
+const router = express.Router();
 
-aiRouter.post("/generate-article", auth, generateArticle);
-aiRouter.post("/generate-blog-title", auth, generateBlogTitle);
-aiRouter.post("/generate-image", auth, generateImage);
-aiRouter.post("/remove-image-background", upload.single("image"), auth, removeImageBackground);
-aiRouter.post("/remove-image-object", upload.single("image"), auth, removeImageObject);
-aiRouter.post("/resume-review", upload.single("resume"), auth, resumeReview);
+router.post("/generate-article", generateArticle);
+router.post("/generate-blog-title", generateBlogTitle);
+router.post("/resume-review", upload.single("resume"), resumeReview);
 
-export default aiRouter;
+export default router;
