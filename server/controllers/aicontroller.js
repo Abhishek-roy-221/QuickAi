@@ -1,10 +1,9 @@
+import axios from "axios";
 import sql from "../configs/db.js";
 import { clerkClient } from "@clerk/express";
-import fetch from "node-fetch";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_URL =
-  "https://generativelanguage.googleapis.com/v1/models/gemini-1.0-pro:generateContent";
+  "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent";
 
 export const generateArticle = async (req, res) => {
   try {
@@ -20,29 +19,23 @@ export const generateArticle = async (req, res) => {
       });
     }
 
-    const response = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const response = await axios.post(
+      `${GEMINI_URL}?key=${process.env.GEMINI_API_KEY}`,
+      {
         contents: [
           {
             parts: [{ text: prompt }],
           },
         ],
-      }),
-    });
+      }
+    );
 
-    const data = await response.json();
+    const content =
+      response.data.candidates?.[0]?.content?.parts?.[0]?.text;
 
-    if (!response.ok) {
-      console.error("Gemini error:", data);
-      return res.status(500).json({
-        success: false,
-        message: "Gemini API failed",
-      });
+    if (!content) {
+      throw new Error("Empty response from Gemini");
     }
-
-    const content = data.candidates[0].content.parts[0].text;
 
     await sql`
       INSERT INTO creations (user_id, prompt, content, type)
@@ -57,7 +50,10 @@ export const generateArticle = async (req, res) => {
 
     res.json({ success: true, content });
   } catch (error) {
-    console.error("generateArticle error:", error);
-    res.status(500).json({ success: false, message: "Server error" });
+    console.error("Gemini error:", error.response?.data || error.message);
+    res.status(500).json({
+      success: false,
+      message: "Gemini generation failed",
+    });
   }
 };
