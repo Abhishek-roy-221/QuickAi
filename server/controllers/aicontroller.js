@@ -16,7 +16,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
  * 🚨 ONLY THIS MODEL WORKS WITH @google/generative-ai
  */
 const model = genAI.getGenerativeModel({
-  model: "gemini-pro",
+  model: "gemini-1.0-pro",
 });
 
 /* ================= TEXT FEATURES ================= */
