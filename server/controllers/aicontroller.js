@@ -6,7 +6,9 @@ import { v2 as cloudinary } from "cloudinary";
 import fs from 'fs';
 import pdf from 'pdf-parse/lib/pdf-parse.js';
 
-// Initialize OpenAI with Gemini Base URL - No trailing slash
+// INITIALIZATION: 
+// The v1beta endpoint is the most stable for the OpenAI shim.
+// We remove the trailing slash to ensure the SDK appends paths correctly.
 const AI = new OpenAI({
     apiKey: process.env.GEMINI_API_KEY,
     baseURL: "https://generativelanguage.googleapis.com/v1beta/openai"
@@ -23,9 +25,9 @@ export const generateArticle = async (req, res) => {
             return res.json({ success: false, message: "Limits reached. Upgrade to continue." });
         }
 
-        // CRITICAL FIX: Added 'models/' prefix to the model name
+        // Using 'gemini-1.5-flash' with the explicit baseURL above
         const response = await AI.chat.completions.create({
-            model: "models/gemini-1.5-flash",
+            model: "gemini-1.5-flash",
             messages: [{ role: "user", content: prompt }],
             temperature: 0.7,
             max_tokens: Number(length) || 1000,
@@ -34,7 +36,7 @@ export const generateArticle = async (req, res) => {
         const content = response.choices[0]?.message?.content;
         if (!content) throw new Error("AI provider returned empty content");
 
-        // Database insert with error handling
+        // Database insert
         try {
             await sql`INSERT INTO creations (user_id, prompt, content, type)
                       VALUES (${userId}, ${prompt}, ${content}, 'article')`;
@@ -51,8 +53,7 @@ export const generateArticle = async (req, res) => {
         res.json({ success: true, content });
 
     } catch (error) {
-        // Log the full error to Render console for debugging
-        console.error("ARTICLE_ERROR Details:", error);
+        console.error("ARTICLE_ERROR Details:", error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 }
@@ -69,7 +70,7 @@ export const generateBlogTitle = async (req, res) => {
         }
 
         const response = await AI.chat.completions.create({
-            model: "models/gemini-1.5-flash",
+            model: "gemini-1.5-flash",
             messages: [{ role: "user", content: prompt }],
             temperature: 0.7,
             max_tokens: 150,
@@ -171,7 +172,7 @@ export const resumeReview = async (req, res) => {
 
         const prompt = `Review this resume: ${pdfData.text}`;
         const response = await AI.chat.completions.create({
-            model: "models/gemini-1.5-flash",
+            model: "gemini-1.5-flash",
             messages: [{ role: "user", content: prompt }],
             max_tokens: 1500,
         });
