@@ -3,10 +3,10 @@ import sql from "../configs/db.js";
 import { clerkClient } from "@clerk/express";
 import axios from "axios";
 import { v2 as cloudinary } from "cloudinary";
-import fs from 'fs'
-import pdf from 'pdf-parse/lib/pdf-parse.js'
+import fs from 'fs';
+import pdf from 'pdf-parse/lib/pdf-parse.js';
 
-// FIX 1: Explicitly remove the trailing slash from the baseURL
+// Initialize OpenAI with Gemini Base URL - No trailing slash
 const AI = new OpenAI({
     apiKey: process.env.GEMINI_API_KEY,
     baseURL: "https://generativelanguage.googleapis.com/v1beta/openai"
@@ -23,8 +23,7 @@ export const generateArticle = async (req, res) => {
             return res.json({ success: false, message: "Limits reached. Upgrade to continue." });
         }
 
-        // FIX 2: Use the full model path 'models/gemini-1.5-flash'
-        // Some Google endpoints require the 'models/' prefix to avoid 404s
+        // CRITICAL FIX: Added 'models/' prefix to the model name
         const response = await AI.chat.completions.create({
             model: "models/gemini-1.5-flash",
             messages: [{ role: "user", content: prompt }],
@@ -33,13 +32,14 @@ export const generateArticle = async (req, res) => {
         });
 
         const content = response.choices[0]?.message?.content;
-        if (!content) throw new Error("AI returned empty content");
+        if (!content) throw new Error("AI provider returned empty content");
 
+        // Database insert with error handling
         try {
             await sql`INSERT INTO creations (user_id, prompt, content, type)
                       VALUES (${userId}, ${prompt}, ${content}, 'article')`;
         } catch (dbErr) {
-            console.error("Database Error:", dbErr.message);
+            console.error("Database Insert Error:", dbErr.message);
         }
 
         if (plan !== 'premium') {
@@ -49,12 +49,10 @@ export const generateArticle = async (req, res) => {
         }
 
         res.json({ success: true, content });
+
     } catch (error) {
-        // FIX 3: Detailed logging to catch the "no body" issue
+        // Log the full error to Render console for debugging
         console.error("ARTICLE_ERROR Details:", error);
-        if (error.response) {
-            console.error("AI Provider Response:", error.response.data);
-        }
         res.status(500).json({ success: false, message: error.message });
     }
 }
