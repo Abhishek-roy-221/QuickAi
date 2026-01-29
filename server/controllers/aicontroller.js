@@ -6,9 +6,19 @@ import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
 import pdf from "pdf-parse/lib/pdf-parse.js";
 
+/**
+ * Gemini client (kept for other features)
+ */
 const AI = new OpenAI({
   apiKey: process.env.GEMINI_API_KEY,
   baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+});
+
+/**
+ * OpenAI client (ONLY for article generation)
+ */
+const OPENAI = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 export const generateArticle = async (req, res) => {
@@ -25,9 +35,13 @@ export const generateArticle = async (req, res) => {
       });
     }
 
-    const response = await AI.chat.completions.create({
-      model: "gemini-2.0-flash",
+    const response = await OPENAI.chat.completions.create({
+      model: "gpt-4o-mini",
       messages: [
+        {
+          role: "system",
+          content: "You are a professional blog and article writer.",
+        },
         {
           role: "user",
           content: prompt,
@@ -39,7 +53,10 @@ export const generateArticle = async (req, res) => {
 
     const content = response.choices[0].message.content;
 
-    await sql` INSERT INTO creations (user_id, prompt, content, type) VALUES (${userId}, ${prompt}, ${content}, 'article') `;
+    await sql`
+      INSERT INTO creations (user_id, prompt, content, type)
+      VALUES (${userId}, ${prompt}, ${content}, 'article')
+    `;
 
     if (plan !== "premium") {
       await clerkClient.users.updateUserMetadata(userId, {
@@ -79,7 +96,10 @@ export const generateBlogTitle = async (req, res) => {
 
     const content = response.choices[0].message.content;
 
-    await sql` INSERT INTO creations (user_id, prompt, content, type) VALUES (${userId}, ${prompt}, ${content}, 'blog-title') `;
+    await sql`
+      INSERT INTO creations (user_id, prompt, content, type)
+      VALUES (${userId}, ${prompt}, ${content}, 'blog-title')
+    `;
 
     if (plan !== "premium") {
       await clerkClient.users.updateUserMetadata(userId, {
@@ -111,6 +131,7 @@ export const generateImage = async (req, res) => {
 
     const formData = new FormData();
     formData.append("prompt", prompt);
+
     const { data } = await axios.post(
       "https://clipdrop-api.co/text-to-image/v1",
       formData,
@@ -127,9 +148,10 @@ export const generateImage = async (req, res) => {
 
     const { secure_url } = await cloudinary.uploader.upload(base64Image);
 
-    await sql` INSERT INTO creations (user_id, prompt, content, type, publish) VALUES (${userId}, ${prompt}, ${secure_url}, 'image', ${
-      publish ?? false
-    }) `;
+    await sql`
+      INSERT INTO creations (user_id, prompt, content, type, publish)
+      VALUES (${userId}, ${prompt}, ${secure_url}, 'image', ${publish ?? false})
+    `;
 
     res.json({ success: true, content: secure_url });
   } catch (error) {
@@ -160,7 +182,10 @@ export const removeImageBackground = async (req, res) => {
       ],
     });
 
-    await sql` INSERT INTO creations (user_id, prompt, content, type) VALUES (${userId}, 'Remove background from image', ${secure_url}, 'image') `;
+    await sql`
+      INSERT INTO creations (user_id, prompt, content, type)
+      VALUES (${userId}, 'Remove background from image', ${secure_url}, 'image')
+    `;
 
     res.json({ success: true, content: secure_url });
   } catch (error) {
@@ -190,7 +215,10 @@ export const removeImageObject = async (req, res) => {
       resource_type: "image",
     });
 
-    await sql` INSERT INTO creations (user_id, prompt, content, type) VALUES (${userId}, ${`Removed ${object} from image`}, ${imageUrl}, 'image') `;
+    await sql`
+      INSERT INTO creations (user_id, prompt, content, type)
+      VALUES (${userId}, ${`Removed ${object} from image`}, ${imageUrl}, 'image')
+    `;
 
     res.json({ success: true, content: imageUrl });
   } catch (error) {
@@ -233,7 +261,10 @@ export const resumeReview = async (req, res) => {
 
     const content = response.choices[0].message.content;
 
-    await sql` INSERT INTO creations (user_id, prompt, content, type) VALUES (${userId}, 'Review the uploaded resume', ${content}, 'resume-review') `;
+    await sql`
+      INSERT INTO creations (user_id, prompt, content, type)
+      VALUES (${userId}, 'Review the uploaded resume', ${content}, 'resume-review')
+    `;
 
     res.json({ success: true, content });
   } catch (error) {
