@@ -6,19 +6,9 @@ import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
 import pdf from "pdf-parse/lib/pdf-parse.js";
 
-/**
- * Gemini client (kept for other features)
- */
 const AI = new OpenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
-});
-
-/**
- * OpenAI client (ONLY for article generation)
- */
-const OPENAI = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENROUTER_API_KEY,
+  baseURL: "https://openrouter.ai/api/v1",
 });
 
 export const generateArticle = async (req, res) => {
@@ -35,7 +25,7 @@ export const generateArticle = async (req, res) => {
       });
     }
 
-    const response = await OPENAI.chat.completions.create({
+    const response = await AI.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
@@ -88,7 +78,7 @@ export const generateBlogTitle = async (req, res) => {
     }
 
     const response = await AI.chat.completions.create({
-      model: "gemini-2.0-flash",
+      model: "deepseek/deepseek-v4-flash:free",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.7,
       max_tokens: 100,
@@ -253,7 +243,7 @@ export const resumeReview = async (req, res) => {
     const prompt = `Review the following resume and provide constructive feedback on its strengths, weaknesses, and areas for improvement. Resume Content:\n\n${pdfData.text}`;
 
     const response = await AI.chat.completions.create({
-      model: "gemini-2.0-flash",
+      model: "deepseek/deepseek-v4-flash:free",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.7,
       max_tokens: 1000,
